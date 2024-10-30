@@ -131,7 +131,7 @@ class VoiceProcessor:
         try:
             print("    ⏳ Generating audio...")
             audio_stream = await self.elevenlabs.generate(
-                text=text, model="eleven_turbo_v2_5", voice="dDpKZ6xv1gpboV4okVbc"
+                text=text, model="eleven_turbo_v2_5", voice="mZ8K1MPRiT5wDQaasg3i"
             )
 
             print("    ✓ Audio generated successfully")
