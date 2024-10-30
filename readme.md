@@ -1,4 +1,4 @@
-# AI Voice Assistant with Milvus Vector Database
+# AI Voice Assistant with Milvus
 
 ## 🚀 Overview
 This project is a voice-enabled AI assistant that leverages [Milvus](https://github.com/milvus-io/milvus) vector database for semantic search capabilities, allowing for contextual understanding and intelligent responses to user queries.
@@ -8,7 +8,7 @@ This project is a voice-enabled AI assistant that leverages [Milvus](https://git
 
 ## 🎯 Key Features
 
-### Primary Component: Milvus Vector Database
+### Primary Component: [Milvus](https://github.com/milvus-io/milvus) 
 - High-performance vector similarity search
 - Hardware-optimized for efficient querying
 - Supports advanced search algorithms (IVF, HNSW, DiskANN)
