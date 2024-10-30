@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "voice-assistant"
+version = "0.1.0"
+description = ""
+authors = ["stephen37 <stephen.batifol@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+elevenlabs = "^1.10.0"
+pymilvus = {extras = ["model"], version = "^2.4.8"}
+deepgram-sdk = "^3.7.5"
+duckduckgo-search = "^6.3.2"
+assemblyai = {extras = ["extras"], version = "^0.34.0"}
+ollama = "^0.3.3"
+streamlit = "^1.39.0"
+
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.7.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
