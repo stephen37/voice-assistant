@@ -1,5 +1,6 @@
-from pymilvus import MilvusClient, DataType, CollectionSchema, FieldSchema
+from pymilvus import CollectionSchema, DataType, FieldSchema, MilvusClient
 from pymilvus.model.dense import JinaEmbeddingFunction
+
 from config import Config
 
 
@@ -13,7 +14,7 @@ class MilvusWrapper:
             "jina-embeddings-v3",
             self.config.JINA_API_KEY,
             task="retrieval.passage",
-            dimensions=1024
+            dimensions=1024,
         )
         self._ensure_collection_exists()
 
@@ -36,20 +37,18 @@ class MilvusWrapper:
             collection_name=self.config.COLLECTION_NAME,
             data=[query_vector],
             limit=limit,
-            output_fields=["content"]
+            output_fields=["content"],
         )
-        print(f'results of the vector search: {results}')
-        
+        print(f"results of the vector search: {results}")
+
         return [
             {"content": hit["entity"].get("content"), "distance": hit["distance"]}
             for hit in results[0]
         ]
 
-
-
     def add_sample_data(self):
         print("Adding sample data to Milvus collection")
-        
+
         sample_texts = [
             "In 1950, Alan Turing published his seminal paper, 'Computing Machinery and Intelligence,' proposing the Turing Test as a criterion of intelligence, a foundational concept in the philosophy and development of artificial intelligence.",
             "The Dartmouth Conference in 1956 is considered the birthplace of artificial intelligence as a field; here, John McCarthy and others coined the term 'artificial intelligence' and laid out its basic goals.",
@@ -69,47 +68,46 @@ Search Engine in C++: Over 80% of a vector database’s performance is determine
 Column-Oriented: Milvus is a column-oriented vector database system. The primary advantages come from the data access patterns. When performing queries, a column-oriented database reads only the specific fields involved in the query, rather than entire rows, which greatly reduces the amount of data accessed. Additionally, operations on column-based data can be easily vectorized, allowing for operations to be applied in the entire columns at once, further enhancing performance.""",
         ]
 
-
         embeddings = self.ef.encode_documents(sample_texts)
-        
+
         data = [
             {"content": sample_texts[i], "embedding": embeddings[i].tolist()}
             for i in range(len(embeddings))
         ]
-        
-        result = self.client.insert(collection_name=self.config.COLLECTION_NAME, data=data)
+
+        result = self.client.insert(
+            collection_name=self.config.COLLECTION_NAME, data=data
+        )
         print(f"Added {result['insert_count']} sample entries to the collection")
 
     def search_similar_text(self, query_text: str, limit: int = 3) -> list[dict]:
         print(f"Searching for text similar to: '{query_text}'")
         query_vector = self.ef.encode_queries([query_text])[0]
-        
+
         results = self.client.search(
             collection_name=self.config.COLLECTION_NAME,
             data=[query_vector],
             limit=limit,
-            output_fields=["content"] 
+            output_fields=["content"],
         )[0]
         print(f"Found {len(results)} results")
         print(f"Returning results: {results}")
         return [
-            {
-                "text": hit["entity"].get("content"),
-                "distance": hit["distance"]
-            }
+            {"text": hit["entity"].get("content"), "distance": hit["distance"]}
             for hit in results
         ]
-    
-if __name__ == "__main__": 
+
+
+if __name__ == "__main__":
     config = Config()
     milvus_wrapper = MilvusWrapper(config)
     milvus_wrapper.add_sample_data()
 
     query_text = "What event in 1956 marked the official birth of artificial intelligence as a discipline?"
     results = milvus_wrapper.search_similar_text(query_text)
-    
+
     print("Search results:")
     for result in results:
-        print(f"Content: {result['text']}")  
+        print(f"Content: {result['text']}")
         print(f"Distance: {result['distance']}")
         print("---")

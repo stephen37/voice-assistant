@@ -18,6 +18,7 @@ pynput = "^1.7.7"
 google-api-python-client = "^2.149.0"
 google-auth-httplib2 = "^0.2.0"
 google-auth-oauthlib = "^1.2.1"
+keyboard = "^0.13.5"
 
 
 [tool.poetry.group.dev.dependencies]
