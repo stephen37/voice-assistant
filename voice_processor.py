@@ -23,13 +23,15 @@ class VoiceProcessor:
         self.listening_thread = None
 
     def on_open(self, session_opened: aai.RealtimeSessionOpened):
-        print("Session opened with ID:", session_opened.session_id)
+        print("\n🎤 Speech Recognition Session Started")
+        print(f"Session ID: {session_opened.session_id}")
 
     def on_error(self, error: aai.RealtimeError):
-        print("Error:", error)
+        print("\n❌ Error in Speech Recognition:")
+        print(f"    {error}")
 
     def on_close(self):
-        print("Session closed")
+        print("\n🔚 Speech Recognition Session Ended")
 
     def on_data(self, transcript: aai.RealtimeTranscript):
         if not transcript.text:
@@ -37,12 +39,14 @@ class VoiceProcessor:
 
         if isinstance(transcript, aai.RealtimeFinalTranscript):
             final_transcript = transcript.text
-            print(f"Final transcript: {final_transcript}")
+            print("\n📝 Final Transcript:")
+            print(f"    \"{final_transcript}\"")
             if self.transcription_callback:
                 self.transcription_callback(final_transcript)
             self.final_transcript_queue.put(final_transcript)
         else:
-            print(transcript.text, end="\r")
+            # For real-time partial transcripts, overwrite the line
+            print(f"\r🎙️ {transcript.text}", end="", flush=True)
 
     def create_transcriber(self):
         self.transcriber = aai.RealtimeTranscriber(
@@ -51,86 +55,63 @@ class VoiceProcessor:
             on_error=self.on_error,
             on_open=self.on_open,
             on_close=self.on_close,
-            word_boost=["Milvus, Zilliz"]
+            word_boost=["Milvus, Zilliz"],
         )
         return self.transcriber
 
     async def start_continuous_transcription(self):
-        print('Starting continuous transcription...')
+        print("\n🚀 Initializing Speech Recognition...")
         self.stop_transcription()
-        
+
         try:
             self.transcriber = self.create_transcriber()
-            print("Connecting transcriber...")
+            print("    ✓ Created transcriber")
             self.transcriber.connect()
-            print("Transcriber connected, starting microphone stream...")
-            
+            print("    ✓ Connected to speech recognition service")
+
             microphone_stream = aai.extras.MicrophoneStream(sample_rate=16_000)
             thread = threading.Thread(
                 target=self._stream_microphone,
                 args=(microphone_stream, self._stream_callback),
-                daemon=True
+                daemon=True,
             )
             thread.start()
-            print("Microphone stream started successfully")
-            
+            print("    ✓ Started microphone stream")
+            print("\n🎙️ Listening...")
+
         except Exception as e:
-            print(f"Error in start_continuous_transcription: {e}")
+            print("\n❌ Error during initialization:")
+            print(f"    {str(e)}")
             self.transcriber = None
             raise
 
     def _stream_microphone(self, microphone_stream, stream_callback):
-        print("Starting microphone streaming...")
         try:
             for chunk in microphone_stream:
                 if not self.transcriber:
-                    print("Transcriber no longer exists, stopping microphone stream")
+                    print("\n⚠️  Stopping microphone stream (transcriber closed)")
                     break
                 if not stream_callback(chunk):
                     break
         except Exception as e:
-            print(f"Error in microphone streaming: {e}")
+            print("\n❌ Microphone Stream Error:")
+            print(f"    {str(e)}")
         finally:
-            print("Microphone streaming ended")
+            print("\n🔚 Microphone stream ended")
 
     def stop_transcription(self):
-        print("Stopping transcription...")
+        print("\n⏹️  Stopping Speech Recognition...")
         if self.transcriber:
             try:
                 self.transcriber.close()
+                print("    ✓ Transcriber closed successfully")
             except Exception as e:
-                print(f"Error closing transcriber: {e}")
+                print("    ❌ Error closing transcriber:")
+                print(f"       {str(e)}")
             self.transcriber = None
-        print("Transcription stopped")
 
     def set_transcription_callback(self, callback):
         self.transcription_callback = callback
-    
-    def pause_listening(self):
-        if self.transcriber:
-            self.transcriber.close()
-            self.transcriber = None
-
-    async def resume_listening(self):
-        print('Resuming listening...')
-        if not self.transcriber:
-            print('creating trasncriber')
-            self.create_transcriber()
-        
-        try:
-            print('Trying to connect')
-            self.transcriber.connect()
-            print('connected')
-            microphone_stream = aai.extras.MicrophoneStream(sample_rate=16_000)
-            threading.Thread(
-                target=self._stream_microphone,
-                args=(microphone_stream, self._stream_callback),
-                daemon=True  # Make thread daemon so it exits when main program exits
-            ).start()
-        except Exception as e:
-            print(f"Error resuming listening: {e}")
-            self.transcriber = None
-            raise
 
     def _stream_callback(self, chunk):
         if not self.transcriber:
@@ -139,33 +120,32 @@ class VoiceProcessor:
             self.transcriber.stream(chunk)
             return True
         except Exception as e:
-            print(f"Error in stream callback: {e}")
+            print("\n❌ Stream Processing Error:")
+            print(f"    {str(e)}")
             return False
 
     async def text_to_speech(self, text: str):
-        print("\n=== Starting text-to-speech ===")
-        # Explicitly stop the current transcriber
+        print("\n🔊 Converting text to speech...")
         self.stop_transcription()
-        
+
         try:
+            print("    ⏳ Generating audio...")
             audio_stream = await self.elevenlabs.generate(
                 text=text, model="eleven_turbo_v2_5", voice="dDpKZ6xv1gpboV4okVbc"
             )
 
-            print("Audio generated, playing now...")
+            print("    ✓ Audio generated successfully")
             audio_data = b""
             async for chunk in audio_stream:
                 audio_data += chunk
 
+            print("    🔈 Playing audio response...")
             play(audio_data)
-            print("Audio playback completed")
-            
+            print("    ✓ Audio playback completed")
+
         except Exception as e:
-            print(f"Error in text-to-speech conversion or playback: {e}")
-            
-        finally:
-            print("\n=== Restarting transcription ===")
-            # Ensure we wait for audio playback to complete
-            await asyncio.sleep(1.0)
-            # Start a fresh transcription session
-            await self.start_continuous_transcription()
+            print("    ❌ Text-to-Speech Error:")
+            print(f"       {str(e)}")
+        
+        print("\n✨ Ready for next input")
+        print("   Press SPACE to start recording")
