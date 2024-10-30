@@ -91,7 +91,6 @@ Column-Oriented: Milvus is a column-oriented vector database system. The primary
             output_fields=["content"],
         )[0]
         print(f"Found {len(results)} results")
-        print(f"Returning results: {results}")
         return [
             {"text": hit["entity"].get("content"), "distance": hit["distance"]}
             for hit in results

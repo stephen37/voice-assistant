@@ -24,49 +24,53 @@ class VoiceAssistant:
         self.is_transcribing = False 
 
     async def process_transcription(self, text: str):
-        print(f"User: {text}")
+        print("\n👤 User Query:")
+        print(f"    \"{text}\"")
 
+        # Search Milvus for similar content
+        print("\n🔍 Searching knowledge base...")
         milvus_results = self.milvus_wrapper.search_similar_text(text)
-
-        relevant_results = [
-            result for result in milvus_results if result["distance"] > 0.4
-        ]
+        relevant_results = [result for result in milvus_results if result["distance"] > 0.4]
 
         if relevant_results:
-            print("We found relevant results in Milvus")
+            print("\n📚 Found relevant information in knowledge base")
             context = "\n".join([result["text"] for result in milvus_results])
-            print(f"Milvus Context: {context}")
-            augmented_query = f"Context: {context}\n\nUser Query: {text}\n\nPlease answer the user's query based on the given context."
-            print(f"Augmented Query: {augmented_query}")
-            llm_response = await self.llm_processor.process_query(augmented_query)
-            print(f"LLM response: {llm_response}")
+            print("    Context snippets:")
+            for i, result in enumerate(milvus_results, 1):
+                print(f"    {i}. {result['text'][:100]}...")
 
-        elif any(
-            keyword in text.lower()
-            for keyword in ["calendar", "schedule", "events", "appointment"]
-        ):
+            augmented_query = f"Context: {context}\n\nUser Query: {text}\n\nPlease answer the user's query based on the given context."
+            llm_response = await self.llm_processor.process_query(augmented_query)
+
+        # Check for calendar-related queries
+        elif any(keyword in text.lower() for keyword in ["calendar", "schedule", "events", "appointment"]):
+            print("\n📅 Processing calendar-related query...")
             events = await self.calendar_service.get_upcoming_events()
             augmented_query = f"Calendar Events:\n{events}\n\nUser Query: {text}\n\nPlease answer the user's query based on their calendar events."
             llm_response = await self.llm_processor.process_query(augmented_query)
-            print(f"Assistant: {llm_response}")
 
+        # Fall back to web search
         else:
-            print("No relevant results found in Milvus. Searching the web...")
+            print("\n🌐 Searching the web for information...")
             web_results = self.web_searcher.search(text)
 
             if web_results:
-                print("Found some web Results")
+                print("    ✓ Found relevant web results")
                 context = "\n".join(web_results[:3])
-                print(f"Context: {context}")
+                print("    Web snippets:")
+                for i, result in enumerate(web_results[:3], 1):
+                    print(f"    {i}. {result[:100]}...")
 
                 augmented_query = f"Web search results:\n{context}\n\nUser Query: {text}\n\nPlease answer the user's query based on the web search results."
-
                 llm_response = await self.llm_processor.process_query(augmented_query)
             else:
+                print("    ⚠️  No web results found, using direct LLM response")
                 llm_response = await self.llm_processor.process_query(text)
 
-        print(f"Assistant: {llm_response}")
+        print("\n🤖 Assistant Response:")
+        print(f"    \"{llm_response}\"")
 
+        print("\n🔊 Converting response to speech...")
         await self.voice_processor.text_to_speech(llm_response)
 
     def handle_interrupt(self, signum, frame):
@@ -83,11 +87,21 @@ class VoiceAssistant:
     async def toggle_transcription(self):
         self.is_transcribing = not self.is_transcribing
         if self.is_transcribing:
-            print("Started recording...")
+            print("\n🎙️ Started recording...")
             await self.voice_processor.start_continuous_transcription()
         else:
-            print("Stopped recording...")
+            print("\n⏹️  Stopped recording...")
             self.voice_processor.stop_transcription()
+        
+    async def run(self):
+        self.voice_processor.set_transcription_callback(self.transcription_callback)
+        signal.signal(signal.SIGINT, self.handle_interrupt)
+
+        print("\n🚀 Voice Assistant Started")
+        print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        print("    Press SPACE to toggle recording")
+        print("    Press Ctrl+C to exit")
+        print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
         
     async def run(self):
         self.voice_processor.set_transcription_callback(self.transcription_callback)
