@@ -6,6 +6,8 @@ from llm_processor import LLMProcessor
 from voice_processor import VoiceProcessor
 from vector_search import MilvusWrapper
 from web_searcher import WebSearcher
+from calendar_service import CalendarService
+
 
 class VoiceAssistant:
     def __init__(self):
@@ -15,13 +17,12 @@ class VoiceAssistant:
         self.milvus_wrapper = MilvusWrapper(self.config)
         self.milvus_wrapper.add_sample_data()
         self.web_searcher = WebSearcher(self.config)
+        self.calendar_service = CalendarService(self.config)
         self.running = False
         self.loop = asyncio.get_event_loop()
 
     async def process_transcription(self, text: str):
         print(f"User: {text}")
-
-        query_embedding = await self.llm_processor.generate_embedding(text)
 
         milvus_results = self.milvus_wrapper.search_similar_text(text)
 
@@ -38,6 +39,12 @@ class VoiceAssistant:
             print(f'Augmented Query: {augmented_query}')
             llm_response = await self.llm_processor.process_query(augmented_query)
             print(f'LLM response: {llm_response}')
+
+        elif any(keyword in text.lower() for keyword in ['calendar', 'schedule', 'events', 'appointment']):
+            events = await self.calendar_service.get_upcoming_events()
+            augmented_query = f"Calendar Events:\n{events}\n\nUser Query: {text}\n\nPlease answer the user's query based on their calendar events."
+            llm_response = await self.llm_processor.process_query(augmented_query)
+            print(f"Assistant: {llm_response}")
 
         else:
             print("No relevant results found in Milvus. Searching the web...")
